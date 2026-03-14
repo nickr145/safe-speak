@@ -8,7 +8,8 @@ import soundfile as sf
 
 
 BASE_URL = "http://127.0.0.1:8000"
-PROJECT_ROOT = pathlib.Path(__file__).parent
+# Project root: /safe-speak
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
 def record_to_wav(path: pathlib.Path, duration: float = 5.0, sample_rate: int = 16000) -> None:
