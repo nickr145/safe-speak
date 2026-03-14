@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <button id="start">Start recording</button>
+    <button id="stop" disabled>Stop & send</button>
+    <pre id="out"></pre>
+
+    <script>
+      let mediaRecorder;
+      let chunks = [];
+      const out = document.getElementById("out");
+      const startBtn = document.getElementById("start");
+      const stopBtn = document.getElementById("stop");
+
+      startBtn.onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+
+        chunks = [];
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: "audio/webm" });
+          const file = new File([blob], "user_audio.webm", { type: "audio/webm" });
+
+          const form = new FormData();
+          form.append("audio", file);
+
+          // 1) get a session (hard-code scenario for now), using simple POST with no JSON body
+          const startRes = await fetch("http://127.0.0.1:8000/api/call/start/simple?scenario_id=doctor", {
+            method: "POST",
+          });
+          const startData = await startRes.json();
+
+          // 2) send this recording as a turn
+          const turnRes = await fetch(
+            `http://127.0.0.1:8000/api/call/turn?session_id=${startData.session_id}`,
+            { method: "POST", body: form }
+          );
+          const turnData = await turnRes.json();
+
+          out.textContent =
+            "Greeting: " + startData.greeting_text + "\n\n" +
+            "User text: " + turnData.user_text + "\n" +
+            "Claude reply: " + turnData.ai_text + "\n";
+        };
+
+        mediaRecorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      };
+
+      stopBtn.onclick = () => {
+        mediaRecorder.stop();
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      };
+    </script>
+  </body>
+</html>
