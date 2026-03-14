@@ -218,3 +218,7 @@ __marimo__/
 bash.exe.stackdump
 
 .claude/
+
+.mp3/
+
+.wav/

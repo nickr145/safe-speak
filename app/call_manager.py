@@ -85,6 +85,7 @@ def process_user_turn(session: CallSession, user_text: str) -> dict:
         session.conversation_history,
         target_language=session.target_language,
     )
+    print(ai_text)
     session.conversation_history.append({"role": "assistant", "content": ai_text})
 
     # Check if goal is achieved
@@ -106,7 +107,8 @@ def process_user_turn(session: CallSession, user_text: str) -> dict:
             before, after = ai_text.split(marker, 1)
             ai_text_en = before.strip()
             ai_text_translated = after.strip()
-
+    print(ai_text_en)
+    print(ai_text_translated)
     return {
         "ai_text": ai_text_en,
         "ai_text_translated": ai_text_translated,

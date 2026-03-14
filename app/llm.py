@@ -25,6 +25,7 @@ def _build_system_prompt(scenario: Scenario, target_language: str | None = None)
             f"- For every reply, first respond in clear English only.\n"
             f"- Then on a new line starting with 'In {target_language}: ' "
             f"give a natural translation of the same reply in {target_language}.\n"
+            f"- Don't change the script to latin. Retain the original script. Like if chinese, hello would return 你好.\n"
         )
 
     return (
