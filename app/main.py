@@ -58,9 +58,22 @@ def get_scenarios():
 
 @app.post("/api/call/start", response_model=StartCallResponse)
 def api_start_call(req: StartCallRequest):
-    """Start a new call session for a given scenario."""
+    """Start a new call session for a given scenario (JSON body)."""
+    return _start_call_common(req.scenario_id)
+
+
+@app.post("/api/call/start/simple", response_model=StartCallResponse)
+def api_start_call_simple(scenario_id: str):
+    """Start a new call session using a simple POST with query param.
+
+    This avoids CORS preflight complexity for quick browser tests.
+    """
+    return _start_call_common(scenario_id)
+
+
+def _start_call_common(scenario_id: str) -> StartCallResponse:
     try:
-        session = create_session(req.scenario_id)
+        session = create_session(scenario_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

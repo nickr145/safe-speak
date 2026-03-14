@@ -1,6 +1,9 @@
-"""Speech-to-Text module using ElevenLabs API."""
+"""Speech-to-Text module using ElevenLabs STT (Scribe v2) via Python SDK."""
 
-from elevenlabs import ElevenLabs
+from io import BytesIO
+from typing import Any
+
+from elevenlabs.client import ElevenLabs
 
 from app.config import settings
 
@@ -14,12 +17,12 @@ def _get_client() -> ElevenLabs:
     return _client
 
 
-def transcribe_audio(audio_bytes: bytes, sample_rate: int = 16000) -> str:
-    """Transcribe audio bytes to text using ElevenLabs STT.
+def transcribe_audio(audio_bytes: bytes, sample_rate: int = 16000) -> str:  # sample_rate kept for compatibility
+    """Transcribe audio bytes to text using ElevenLabs Scribe v2.
 
     Args:
-        audio_bytes: Raw audio file bytes (WAV, MP3, WebM, etc.)
-        sample_rate: Unused, kept for API compatibility.
+        audio_bytes: Raw audio file bytes (WAV, MP3, etc.).
+        sample_rate: Unused; kept for call-site compatibility.
 
     Returns:
         Transcribed text string.
@@ -34,6 +37,24 @@ def transcribe_audio(audio_bytes: bytes, sample_rate: int = 16000) -> str:
         file=("recording.webm", audio_file, "audio/webm"),
         model_id="scribe_v1",
         language_code="eng",
+        tag_audio_events=True,
+        diarize=False,
     )
 
-    return result.text.strip()
+    # Preferred path: SDK model with .text attribute
+    text_attr = getattr(result, "text", None)
+    if isinstance(text_attr, str):
+        return text_attr.strip()
+
+    # The SDK typically returns a dict-like object; try common shapes.
+    if isinstance(result, str):
+        return result.strip()
+
+    if isinstance(result, dict):
+        if "text" in result and isinstance(result["text"], str):
+            return result["text"].strip()
+        if "transcript" in result and isinstance(result["transcript"], str):
+            return result["transcript"].strip()
+
+    # Fallback: best-effort stringification
+    return str(result).strip()

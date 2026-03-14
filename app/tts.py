@@ -26,16 +26,21 @@ def synthesize_speech(text: str, voice_id: str = "EXAVITQu4vr4xnSDxMaL") -> byte
     """
     client = _get_client()
 
-    audio_iterator = client.text_to_speech.convert(
+    # Depending on SDK version, `convert` may return bytes or a generator of byte chunks.
+    result = client.text_to_speech.convert(
         text=text,
         voice_id=voice_id,
         model_id="eleven_multilingual_v2",
         output_format="mp3_44100_128",
     )
 
-    # Collect all chunks into bytes
-    audio_chunks = []
-    for chunk in audio_iterator:
-        audio_chunks.append(chunk)
+    if isinstance(result, (bytes, bytearray)):
+        return bytes(result)
 
-    return b"".join(audio_chunks)
+    # Fallback: assume it's an iterable/generator of byte chunks
+    chunks: list[bytes] = []
+    for chunk in result:
+        if isinstance(chunk, (bytes, bytearray)):
+            chunks.append(bytes(chunk))
+
+    return b"".join(chunks)
