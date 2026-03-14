@@ -1,6 +1,7 @@
 """FastAPI backend for AI Phone Call Practice."""
 
 import logging
+import json
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 
@@ -63,6 +64,7 @@ def get_scenarios():
 @app.post("/api/call/start", response_model=StartCallResponse)
 def api_start_call(req: StartCallRequest):
     """Start a new call session for a given scenario (JSON body)."""
+    print(json.dumps(req.model_dump()))
     return _start_call_common(req.scenario_id, req.target_language)
 
 
@@ -119,6 +121,14 @@ async def api_user_turn(session_id: str, audio: UploadFile = File(...)):
 
     # Process the turn through the call manager
     result = process_user_turn(session, user_text)
+
+    print(result)
+    print(user_text)
+    print(result["ai_text"])
+    print(result["ai_text_translated"])
+    print(result["state"])
+    print(result["goal_achieved"])
+    print(result["hint"])
 
     return UserTurnResponse(
         session_id=session.session_id,
