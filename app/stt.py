@@ -27,13 +27,15 @@ def transcribe_audio(audio_bytes: bytes, sample_rate: int = 16000) -> str:  # sa
     Returns:
         Transcribed text string.
     """
+    import io
     client = _get_client()
 
-    audio_file = BytesIO(audio_bytes)
+    # ElevenLabs SDK expects a file-like tuple: (filename, file_obj, mime_type)
+    audio_file = io.BytesIO(audio_bytes)
 
-    result: Any = client.speech_to_text.convert(
-        file=audio_file,
-        model_id="scribe_v2",
+    result = client.speech_to_text.convert(
+        file=("recording.webm", audio_file, "audio/webm"),
+        model_id="scribe_v1",
         language_code="eng",
         tag_audio_events=True,
         diarize=False,
