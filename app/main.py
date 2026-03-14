@@ -1,6 +1,10 @@
 """FastAPI backend for AI Phone Call Practice."""
 
+import logging
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
+
+logger = logging.getLogger(__name__)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
@@ -59,21 +63,24 @@ def get_scenarios():
 @app.post("/api/call/start", response_model=StartCallResponse)
 def api_start_call(req: StartCallRequest):
     """Start a new call session for a given scenario (JSON body)."""
-    return _start_call_common(req.scenario_id)
+    return _start_call_common(req.scenario_id, req.target_language)
 
 
 @app.post("/api/call/start/simple", response_model=StartCallResponse)
-def api_start_call_simple(scenario_id: str):
+def api_start_call_simple(scenario_id: str, target_language: str | None = None):
     """Start a new call session using a simple POST with query param.
 
     This avoids CORS preflight complexity for quick browser tests.
     """
-    return _start_call_common(scenario_id)
+    return _start_call_common(scenario_id, target_language)
 
 
-def _start_call_common(scenario_id: str) -> StartCallResponse:
+def _start_call_common(
+    scenario_id: str,
+    target_language: str | None = None,
+) -> StartCallResponse:
     try:
-        session = create_session(scenario_id)
+        session = create_session(scenario_id, target_language=target_language)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -85,6 +92,7 @@ def _start_call_common(scenario_id: str) -> StartCallResponse:
         scenario_title=session.scenario.title,
         greeting_text=greeting_text,
         state=session.state.value,
+        target_language=session.target_language,
     )
 
 
@@ -103,7 +111,11 @@ async def api_user_turn(session_id: str, audio: UploadFile = File(...)):
     user_text = transcribe_audio(audio_bytes)
 
     if not user_text:
-        raise HTTPException(status_code=400, detail="Could not transcribe audio")
+        logger.warning(
+            "Empty transcript from STT (audio_bytes=%s)",
+            len(audio_bytes),
+        )
+        user_text = "I didn't catch that."
 
     # Process the turn through the call manager
     result = process_user_turn(session, user_text)
@@ -112,6 +124,7 @@ async def api_user_turn(session_id: str, audio: UploadFile = File(...)):
         session_id=session.session_id,
         user_text=user_text,
         ai_text=result["ai_text"],
+        ai_text_translated=result["ai_text_translated"],
         state=result["state"],
         goal_achieved=result["goal_achieved"],
         hint=result["hint"],
@@ -134,6 +147,7 @@ def api_user_turn_text(session_id: str, text: str):
         session_id=session.session_id,
         user_text=text,
         ai_text=result["ai_text"],
+        ai_text_translated=result["ai_text_translated"],
         state=result["state"],
         goal_achieved=result["goal_achieved"],
         hint=result["hint"],

@@ -17,22 +17,36 @@ def _get_client() -> anthropic.Anthropic:
     return _client
 
 
-def _build_system_prompt(scenario: Scenario) -> str:
+def _build_system_prompt(scenario: Scenario, target_language: str | None = None) -> str:
+    """Build the system prompt for Claude, optionally requesting bilingual replies."""
+    lang_rule = ""
+    if target_language:
+        lang_rule = (
+            f"- For every reply, first respond in clear English only.\n"
+            f"- Then on a new line starting with 'In {target_language}: ' "
+            f"give a natural translation of the same reply in {target_language}.\n"
+        )
+
     return (
         f"You are {scenario.persona_name}, a {scenario.role} at {scenario.organization}. "
         f"You are speaking with a newcomer over the phone. "
         f"Your job is to complete this interaction: {scenario.call_goal}. "
-        f"Rules: "
-        f"- Speak as a real {scenario.role} would — professional, clear, slightly slow pacing. "
-        f"- Keep each response under 30 words. "
-        f"- If the user says something unclear, ask ONE clarifying question. "
-        f'- If the user is silent or confused, offer a helpful prompt: "Are you looking for...". '
-        f"- When the goal is achieved, confirm it and say goodbye warmly. "
+        f"Rules:\n"
+        f"{lang_rule}"
+        f"- Speak as a real {scenario.role} would — professional, clear, slightly slow pacing.\n"
+        f"- Keep each response under 30 words.\n"
+        f"- If the user says something unclear, ask ONE clarifying question.\n"
+        f'- If the user is silent or confused, offer a helpful prompt: \"Are you looking for...\".\n'
+        f"- When the goal is achieved, confirm it and say goodbye warmly.\n"
         f"- If the user makes a language error, respond naturally — do not correct grammar."
     )
 
 
-def get_ai_response(scenario: Scenario, conversation_history: list[dict]) -> str:
+def get_ai_response(
+    scenario: Scenario,
+    conversation_history: list[dict],
+    target_language: str | None = None,
+) -> str:
     """Get AI persona response for the current conversation turn.
 
     Args:
@@ -47,7 +61,7 @@ def get_ai_response(scenario: Scenario, conversation_history: list[dict]) -> str
     response = client.messages.create(
         model=MODEL,
         max_tokens=150,
-        system=_build_system_prompt(scenario),
+        system=_build_system_prompt(scenario, target_language=target_language),
         messages=conversation_history,
     )
 

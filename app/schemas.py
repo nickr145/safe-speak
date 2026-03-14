@@ -3,6 +3,8 @@ from pydantic import BaseModel
 
 class StartCallRequest(BaseModel):
     scenario_id: str
+    # Optional target language for bilingual replies, e.g. "Spanish", "French"
+    target_language: str | None = None
 
 
 class StartCallResponse(BaseModel):
@@ -11,6 +13,7 @@ class StartCallResponse(BaseModel):
     scenario_title: str
     greeting_text: str
     state: str
+    target_language: str | None = None
 
 
 class UserTurnRequest(BaseModel):
@@ -20,7 +23,10 @@ class UserTurnRequest(BaseModel):
 class UserTurnResponse(BaseModel):
     session_id: str
     user_text: str
+    # AI reply in English (primary language)
     ai_text: str
+    # Same reply translated into the user's target language, if requested
+    ai_text_translated: str | None = None
     state: str
     goal_achieved: bool
     hint: str | None = None

@@ -26,10 +26,10 @@ def record_to_wav(path: pathlib.Path, duration: float = 5.0, sample_rate: int = 
     print(f"Saved recording to {path}")
 
 
-def start_session(scenario_id: str = "doctor") -> dict:
+def start_session(scenario_id: str = "doctor", target_language: str = "French") -> dict:
     resp = requests.post(
         f"{BASE_URL}/api/call/start",
-        json={"scenario_id": scenario_id},
+        json={"scenario_id": scenario_id, "target_language": target_language},
         timeout=30,
     )
     resp.raise_for_status()
@@ -65,8 +65,11 @@ def tts_synthesize(text: str, out_path: pathlib.Path, voice_id: Optional[str] = 
 
 
 def main() -> None:
-    print("Starting voice roundtrip demo (ElevenLabs STT + Claude + ElevenLabs TTS)")
-    session = start_session("doctor")
+    print(
+        "Starting voice roundtrip demo (ElevenLabs STT + Claude + ElevenLabs TTS, "
+        "with bilingual English + French replies)",
+    )
+    session = start_session("doctor", target_language="French")
     session_id = session["session_id"]
     greeting = session["greeting_text"]
     scenario_title = session["scenario_title"]
@@ -95,14 +98,22 @@ def main() -> None:
                 print("Nothing transcribed; try again.")
                 continue
 
-            # Claude via backend call manager
+            # Claude via backend call manager (bilingual: English + French)
             turn = call_claude(session_id, user_text)
-            ai_text = turn["ai_text"]
-            print(f"Claude reply: {ai_text}")
+            ai_text_en = turn["ai_text"]
+            ai_text_fr = turn.get("ai_text_translated")
+
+            print("\n=== Claude reply ===")
+            print(f"English: {ai_text_en}")
+            if ai_text_fr:
+                print(f"French:  {ai_text_fr}")
 
             # TTS
-            reply_path = PROJECT_ROOT / f"reply_{int(time.time())}.mp3"
-            tts_synthesize(ai_text, reply_path)
+            reply_path = PROJECT_ROOT / f"reply_en_{int(time.time())}.mp3"
+            tts_synthesize(ai_text_en, reply_path)
+            if ai_text_fr:
+                reply_path_fr = PROJECT_ROOT / f"reply_fr_{int(time.time())}.mp3"
+                tts_synthesize(ai_text_fr, reply_path_fr)
             print()
 
     finally:
